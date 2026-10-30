@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="全店分・全員分の大きなExcel・CSVを、店舗ごと・担当者ごとなどに分けて、別々のファイルやシートにする無料ツール。ファイルはブラウザの中だけで処理され、どこにも送信されません。">
+<title>Excel分ける箱</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+:root{
+  --bg:#f6f5f1;--card:#ffffff;--ink:#1f2328;--muted:#5f6670;--line:#dcd9d0;
+  --accent:#1f6f5c;--accent-ink:#ffffff;--accent-soft:#e3f1ec;
+  --warn:#fff6e0;--warn-ink:#7a5000;--bad:#fbe9e7;--bad-ink:#a1362a;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#16181b;--card:#202327;--ink:#e8e6e1;--muted:#a3a8ae;--line:#363a40;
+    --accent:#4fb39a;--accent-ink:#0f1a17;--accent-soft:#1d3530;
+    --warn:#3a3016;--warn-ink:#f0cf7a;--bad:#3a1f1c;--bad-ink:#f2a097;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  line-height:1.7;font-size:16px}
+.wrap{max-width:920px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.9rem;margin:8px 0 4px;letter-spacing:.02em}
+.lead{margin:0 0 8px}
+.private{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;color:var(--accent);font-weight:600}
+.private::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--accent)}
+section{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 18px;margin-top:18px}
+.step{font-size:.8rem;font-weight:700;color:var(--accent);letter-spacing:.1em}
+h2{font-size:1.2rem;margin:2px 0 14px}
+.muted{color:var(--muted);font-size:.92rem}
+.drop{display:block;border:2px dashed var(--line);border-radius:12px;padding:22px 12px;text-align:center;cursor:pointer;
+  background:var(--bg);transition:.15s}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{display:none}
+.drop .big{font-weight:700}
+.info{margin-top:8px;min-height:1.6em;font-size:.95rem}
+.fname{font-weight:600;word-break:break-all}
+.err{color:var(--bad-ink);font-size:.92rem}
+select,input[type=number]{font:inherit;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);max-width:100%}
+input[type=number]{width:5em}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;margin-top:12px}
+.note{background:var(--warn);color:var(--warn-ink);border-radius:10px;padding:10px 12px;margin-top:12px;font-size:.92rem}
+.note button{margin-left:6px}
+button{font:inherit;cursor:pointer;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:6px 12px}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;padding:12px 22px;font-size:1.05rem}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,select:focus-visible,input:focus-visible,.drop:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.check{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:4px 0 12px;font-weight:600}
+.check .ok{color:var(--accent)}
+.check .ng{color:var(--bad-ink)}
+.tablebox{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{background:var(--bg)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.fn{color:var(--muted);font-size:.85rem;white-space:normal;word-break:break-all}
+.opts{display:grid;gap:10px}
+.opt{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:12px;padding:12px 14px;cursor:pointer}
+.opt input{margin-top:6px}
+.opt b{display:block}
+.status{margin-top:10px;font-weight:600}
+.status.err{color:var(--bad-ink)}
+footer{margin-top:28px;font-size:.85rem;color:var(--muted)}
+footer a{color:var(--accent)}
+.offline{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin-top:14px;padding:12px 16px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:.93rem}.offline a{font-weight:700;color:var(--accent)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Excel分ける箱</h1>
+  <p class="lead">全店分・全員分の大きな表を、<b>店舗ごと・担当者ごとなどに分けて</b>、別々のファイルやシートにします。各所に送る分を1つずつ切り出す作業はもう不要です。</p>
+  <div class="private">ファイルはこのブラウザの中だけで処理され、どこにも送信されません</div>
+  <div class="offline"><span>Excel作業を自分で自動化してみたい方へ</span><a href="https://www.amazon.co.jp/dp/B0HPKZ1JQJ" target="_blank" rel="noopener">Kindle本『Python未経験でも大丈夫 毎月のExcel作業をダブルクリックで終わらせる本』→</a></div>
+
+  <section>
+    <div class="step">STEP 1</div>
+    <h2>分けたいファイルを入れる</h2>
+    <label class="drop" id="drop">
+      <input type="file" id="file" accept=".xlsx,.xls,.xlsm,.csv">
+      <div class="big">ここにドラッグ</div>
+      <div class="muted">またはタップしてファイルを選ぶ</div>
+    </label>
+    <div class="info" id="info"></div>
+    <div class="row">
+      <label>見出しの行 <input type="number" id="hdr" min="1" max="50" value="1"> 行目</label>
+      <label id="sheetWrap" hidden>シート <select id="sheet"></select></label>
+      <span class="muted">.xlsx / .xls / .csv（Shift_JISのCSVも文字化けしません）</span>
+    </div>
+    <div class="note" id="sample-note" hidden>
+      いま表示しているのは<b>動作確認用のサンプル</b>（架空の4店舗・10月分の売上）です。
+      <button type="button" id="clear-sample">サンプルを消す</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="step">STEP 2</div>
+    <h2>どの列で分けるかを選ぶ</h2>
+    <div class="row" style="margin-top:0">
+      <label for="key">分ける列</label><select id="key"></select>
+    </div>
+    <p class="muted">「店舗」「担当者」「部署」など、同じ値がくり返し出てくる列を選びます。自動で候補を選んでいます。</p>
+    <div id="groups"></div>
+  </section>
+
+  <section>
+    <div class="step">STEP 3</div>
+    <h2>保存のしかたを選んで保存する</h2>
+    <div class="opts" role="radiogroup" aria-label="保存のしかた">
+      <label class="opt"><input type="radio" name="mode" value="files" checked><span><b>別々のファイルにする（ZIPで保存）</b><span class="muted">「元のファイル名_店舗名.xlsx」のように、グループごとに1つのExcelファイルを作ります。各所にそのまま送れます。</span></span></label>
+      <label class="opt"><input type="radio" name="mode" value="sheets"><span><b>1つのファイルの中でシートに分ける</b><span class="muted">1つのExcelファイルに、グループごとのシートを作ります。</span></span></label>
+    </div>
+    <div class="row">
+      <button class="primary" id="save" disabled>分けて保存</button>
+    </div>
+    <div class="status" id="status" role="status"></div>
+  </section>
+
+  <footer>
+    <p>本ツールは無料・無保証です。大切なファイルは元のファイルを残したうえでお使いください。各ファイルの見出しは元の表の見出しを使い、値はそのまま写します（数式や色・書式は引き継ぎません）。<br>
+    Excelファイルの読み書きには <a href="https://sheetjs.com/" target="_blank" rel="noopener">SheetJS</a>（Apache License 2.0）、ZIPの作成には <a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a>（MIT License）を使用しています。</p>
+    <p>姉妹ツール：<a href="https://takimprove.github.io/excel-matome/">Excelまとめ箱</a>（複数のExcel・CSVを1つにまとめる）／<a href="https://takimprove.github.io/excel-mikurabe/">Excel見比べ箱</a>（2つのファイルの違いを一覧にする）／ <a href="https://takimprove.github.io/">TAKimprove</a></p>
+  </footer>
+</div>
+
+<script>
+(function(){
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BLANK = '（空欄）';
+const state = { wb:null, fname:'', isSample:false, header:[], rows:[], groups:null };
+
+// ── 読み込み ─────────────────────────────
+function decodeCsv(buf){
+  try { return new TextDecoder('utf-8',{fatal:true}).decode(buf).replace(/^﻿/,''); }
+  catch(e){ return new TextDecoder('shift_jis').decode(buf); }
+}
+async function readFile(file){
+  const buf = await file.arrayBuffer();
+  if (/\.csv$/i.test(file.name)) return XLSX.read(decodeCsv(buf), {type:'string', cellDates:true, raw:false});
+  return XLSX.read(buf, {type:'array', cellDates:true});
+}
+function cleanHeaders(row){
+  const seen = {};
+  return (row||[]).map((h,i)=>{
+    let n = (h===null||h===undefined||String(h).trim()==='') ? '列'+(i+1) : String(h).trim();
+    if (seen[n]) { seen[n]++; n = n+'_'+seen[n]; } else seen[n]=1;
+    return n;
+  });
+}
+function parse(){
+  const wb = state.wb; if (!wb) return;
+  const sheet = $('#sheet').value || wb.SheetNames[0];
+  const hr = Math.max(1, parseInt($('#hdr').value,10)||1);
+  const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheet], {header:1, raw:true, defval:null, blankrows:false});
+  if (aoa.length < hr){ state.header=[]; state.rows=[]; setInfo('見出しの行（'+hr+'行目）までデータがありません', true); render(); return; }
+  const width = aoa.reduce((m,r)=>Math.max(m,(r||[]).length),0);
+  const head = aoa[hr-1] || [];
+  state.header = cleanHeaders(Array.from({length:Math.max(width, head.length)},(_,i)=>head[i]));
+  state.rows = aoa.slice(hr).filter(r=>r && r.some(v=>v!==null && v!==''))
+                  .map(r=>state.header.map((_,j)=> r[j]===undefined ? null : r[j]));
+  setInfo('<span class="fname">'+esc(state.fname)+'</span>（'+esc(sheet)+'）：'+state.rows.length.toLocaleString('ja-JP')+'行・'+state.header.length+'列');
+  pickKey();
+  render();
+}
+function pickKey(){
+  const sel = $('#key'); const prev = sel.value;
+  sel.innerHTML = state.header.map((h,i)=>'<option value="'+i+'">'+esc(h)+'</option>').join('');
+  if (prev !== '' && +prev < state.header.length && state.header.length){ sel.value = prev; return; }
+  // 候補：文字の列で、種類が2〜50個、かつ行数より十分少ない列。名前に「店」「担当」「部」「支」「課」などを含む列を優先
+  let best = 0, bestScore = -1;
+  state.header.forEach((h,j)=>{
+    const vals = state.rows.map(r=>r[j]);
+    const texts = vals.filter(v=>typeof v==='string' && v.trim()!=='').length;
+    const uniq = new Set(vals.map(v=>v===null?'':String(v))).size;
+    let s = 0;
+    if (texts >= vals.length*0.7) s += 2;
+    if (uniq>=2 && uniq<=50 && uniq < vals.length/2) s += 3;
+    if (/店|担当|部|支|課|拠点|営業所|地区|エリア|取引先|得意先/.test(h)) s += 2;
+    if (s > bestScore){ bestScore = s; best = j; }
+  });
+  sel.value = String(best);
+}
+function setInfo(html, err){ const el=$('#info'); el.innerHTML = html; el.className = 'info'+(err?' err':''); }
+
+// ── グループ分け ─────────────────────────
+function keyOf(v){
+  if (v===null || v===undefined || String(v).trim()==='') return BLANK;
+  if (v instanceof Date) return fmtDate(v);
+  return String(v).trim();
+}
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function group(){
+  const j = +$('#key').value;
+  const m = new Map();
+  state.rows.forEach(r=>{ const k = keyOf(r[j]); if (!m.has(k)) m.set(k, []); m.get(k).push(r); });
+  return [...m.entries()].sort((a,b)=> a[0]===BLANK ? 1 : b[0]===BLANK ? -1 : a[0].localeCompare(b[0],'ja',{numeric:true}));
+}
+const BAD_FN = /[\\/:*?"<>|\u0000-\u001f]/g, BAD_SHEET = /[\\/:*?\[\]]/g;
+function safeFile(s){ return s.replace(BAD_FN,'_').replace(/\s+$/,'').slice(0,80) || '名前なし'; }
+function baseName(){ return safeFile(state.fname.replace(/\.(xlsx|xls|xlsm|csv)$/i,'')); }
+function uniqueNames(list, maxLen, bad){
+  const used = new Set();
+  return list.map(n=>{
+    let b = n.replace(bad,'_').slice(0,maxLen) || '名前なし', name = b, i = 2;
+    while (used.has(name.toLowerCase())){ const suf='_'+i++; name = b.slice(0,maxLen-suf.length)+suf; }
+    used.add(name.toLowerCase()); return name;
+  });
+}
+
+// ── 表示 ─────────────────────────────────
+function render(){
+  const box = $('#groups');
+  if (!state.rows.length){ box.innerHTML=''; $('#save').disabled = true; state.groups=null; return; }
+  const g = group(); state.groups = g;
+  const total = g.reduce((s,[,rows])=>s+rows.length,0);
+  const files = uniqueNames(g.map(([k])=>baseName()+'_'+k), 120, BAD_FN);
+  const okTotal = total === state.rows.length;
+  let html = '<div class="check"><span>'+g.length+'グループに分かれます</span>'+
+    '<span class="'+(okTotal?'ok':'ng')+'">行数の合計 '+total.toLocaleString('ja-JP')+' ／ 元の表 '+state.rows.length.toLocaleString('ja-JP')+(okTotal?'（一致）':'（不一致）')+'</span></div>';
+  if (g.length > 200) html += '<p class="err">グループが'+g.length+'個あります。分ける列が合っているか確かめてください（日付や金額の列では細かく分かれすぎます）。</p>';
+  else if (g.length === 1) html += '<p class="muted">この列は値が1種類しかないので、分けても1つのままです。</p>';
+  if (g.some(([k])=>k===BLANK)) html += '<p class="muted">分ける列が空欄の行は「'+BLANK+'」にまとめます。</p>';
+  html += '<div class="tablebox"><table><thead><tr><th>'+esc(state.header[+$('#key').value])+'</th><th class="num">行数</th><th>保存されるファイル名</th></tr></thead><tbody>';
+  g.slice(0,300).forEach(([k,rows],i)=>{
+    html += '<tr><td>'+esc(k)+'</td><td class="num">'+rows.length.toLocaleString('ja-JP')+'</td><td class="fn">'+esc(files[i])+'.xlsx</td></tr>';
+  });
+  html += '</tbody></table></div>';
+  box.innerHTML = html;
+  $('#save').disabled = g.length > 1000;
+}
+
+// ── 保存 ─────────────────────────────────
+function sheetFor(rows){
+  const ws = XLSX.utils.aoa_to_sheet([state.header, ...rows], {cellDates:true, dateNF:'yyyy/mm/dd'});
+  ws['!cols'] = state.header.map((h,j)=>{
+    let w = String(h).length*2+2;
+    for (let i=0;i<Math.min(rows.length,200);i++){ const v=rows[i][j]; if(v!==null) w=Math.max(w, String(v instanceof Date?'2026/01/01':v).length+2); }
+    return {wch: Math.min(40, Math.max(8, w))};
+  });
+  ws['!autofilter'] = {ref: XLSX.utils.encode_range({s:{r:0,c:0},e:{r:Math.max(rows.length,1),c:state.header.length-1}})};
+  return ws;
+}
+function setStatus(t, err){ const s=$('#status'); s.textContent=t; s.className='status'+(err?' err':''); }
+function download(blob, name){
+  const url = URL.createObjectURL(blob); const a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+$('#save').addEventListener('click', async ()=>{
+  const g = state.groups; if (!g) return;
+  const mode = document.querySelector('input[name=mode]:checked').value;
+  $('#save').disabled = true; setStatus('作成中…');
+  try {
+    if (mode === 'sheets'){
+      const wb = XLSX.utils.book_new();
+      const names = uniqueNames(g.map(([k])=>k), 31, BAD_SHEET);
+      g.forEach(([k,rows],i)=> XLSX.utils.book_append_sheet(wb, sheetFor(rows), names[i]));
+      const out = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+      download(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), baseName()+'_分割.xlsx');
+      setStatus(g.length+'枚のシートに分けて「'+baseName()+'_分割.xlsx」を保存しました');
+    } else {
+      if (!window.JSZip) throw new Error('ZIPを作る部品が読み込めませんでした。ページを再読み込みしてください');
+      const zip = new JSZip();
+      const files = uniqueNames(g.map(([k])=>baseName()+'_'+k), 120, BAD_FN);
+      g.forEach(([k,rows],i)=>{
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheetFor(rows), uniqueNames([k],31,BAD_SHEET)[0]);
+        zip.file(files[i]+'.xlsx', XLSX.write(wb, {bookType:'xlsx', type:'array'}));
+      });
+      const blob = await zip.generateAsync({type:'blob', compression:'DEFLATE'});
+      download(blob, baseName()+'_分割.zip');
+      setStatus(g.length+'個のファイルに分けて「'+baseName()+'_分割.zip」を保存しました。ZIPを展開して使ってください');
+    }
+  } catch(e){ setStatus('保存できませんでした：'+(e.message||e), true); }
+  $('#save').disabled = false;
+});
+
+// ── 操作 ─────────────────────────────────
+async function load(file){
+  if (!/\.(xlsx|xls|xlsm|csv)$/i.test(file.name)){ setInfo('Excel（.xlsx / .xls）かCSVのファイルを選んでください', true); return; }
+  setInfo('読み込み中…');
+  try {
+    state.wb = await readFile(file); state.fname = file.name; state.isSample = false;
+    $('#sample-note').hidden = true; $('#key').value = '';
+    fillSheets(); parse();
+  } catch(e){ state.wb=null; state.rows=[]; render(); setInfo('読み込めませんでした（壊れているか、パスワード付きの可能性があります）', true); }
+}
+function fillSheets(){
+  const names = state.wb.SheetNames;
+  $('#sheet').innerHTML = names.map(n=>'<option>'+esc(n)+'</option>').join('');
+  $('#sheetWrap').hidden = names.length < 2;
+}
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop', e=>{ if (e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+$('#file').addEventListener('change', e=>{ if (e.target.files[0]) load(e.target.files[0]); e.target.value=''; });
+$('#hdr').addEventListener('change', ()=>{ $('#key').value=''; parse(); });
+$('#sheet').addEventListener('change', ()=>{ $('#key').value=''; parse(); });
+$('#key').addEventListener('change', render);
+$('#clear-sample').addEventListener('click', ()=>{
+  state.wb=null; state.rows=[]; state.header=[]; state.isSample=false;
+  $('#sample-note').hidden = true; $('#key').innerHTML=''; setInfo(''); render(); setStatus('');
+});
+
+// ── サンプル（架空データ） ──────────────────
+function sample(){
+  const shops=['金沢店','加賀店','小松店','福井店'], staff={'金沢店':['山田','佐藤'],'加賀店':['中村'],'小松店':['田中','小林'],'福井店':['加藤']};
+  const items=[['加賀棒茶',860],['九谷焼マグ',3200],['治部煮セット',1580],['かぶら寿し',2100]];
+  let seed=7; const rnd=()=>{ seed=(seed*16807)%2147483647; return seed/2147483647; };
+  const aoa=[['日付','店舗','担当','商品','数量','金額']];
+  for(let d=1; d<=31; d+=2) shops.forEach(s=>{ const it=items[Math.floor(rnd()*items.length)], q=1+Math.floor(rnd()*6), st=staff[s][Math.floor(rnd()*staff[s].length)];
+    aoa.push([new Date(2026,9,d), s, st, it[0], q, q*it[1]]); });
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(aoa,{cellDates:true}), '売上');
+  state.wb = wb; state.fname = '売上_2026年10月_全店.xlsx'; state.isSample = true;
+  $('#sample-note').hidden = false; fillSheets(); parse();
+}
+if (window.XLSX) sample(); else setInfo('部品の読み込みに失敗しました。ページを再読み込みしてください', true);
+})();
+</script>
+</body>
+</html>
