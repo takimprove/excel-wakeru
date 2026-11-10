@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="全店分・全員分の大きなExcel・CSVを、店舗ごと・担当者ごとなどに分けて、別々のファイルやシートにする無料ツール。ファイルはブラウザの中だけで処理され、どこにも送信されません。">
-<title>Excel分ける箱</title>
+<meta name="description" content="全店分・全員分の大きなExcel・CSVを、店舗ごと・担当者ごと・部署ごとなど列の値で分割して、別々のファイル（ZIP）やシートにする無料ツール。分割後の行数チェックつき。ファイルはブラウザの中だけで処理され、どこにも送信されません。">
+<title>Excel分ける箱｜Excelを店舗別・担当者別のファイルに分割する無料ツール（インストール不要）</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
@@ -74,10 +74,8 @@ footer a{color:var(--accent)}
 <body>
 <div class="wrap">
   <h1>Excel分ける箱</h1>
-  <p class="lead">全店分・全員分の大きな表を、<b>店舗ごと・担当者ごとなどに分けて</b>、別々のファイルやシートにします。各所に送る分を1つずつ切り出す作業はもう不要です。</p>
+  <p class="lead"><b>店舗ごと・担当者ごとに、1つずつ切り出していませんか？</b><br>全店分・全員分の大きな表を、<b>選んだ列の値ごとに分けて</b>、別々のファイルやシートにします。分けたあとの行数の合計が元の表と合っているかも確かめられます。</p>
   <div class="private">ファイルはこのブラウザの中だけで処理され、どこにも送信されません</div>
-  <div class="offline"><span>ネットにつながらない環境でも使いたい方へ</span><a href="https://takimprove.booth.pm/items/9034892" target="_blank" rel="noopener">オフライン版（3本セット）はこちら →</a></div>
-  <div class="offline"><span>Excel作業を自分で自動化してみたい方へ</span><a href="https://www.amazon.co.jp/dp/B0HPKZ1JQJ" target="_blank" rel="noopener">Kindle本『Python未経験でも大丈夫 毎月のExcel作業をダブルクリックで終わらせる本』→</a></div>
 
   <section>
     <div class="step">STEP 1</div>
@@ -122,6 +120,9 @@ footer a{color:var(--accent)}
     <div class="status" id="status" role="status"></div>
   </section>
 
+  <p style="margin:28px 0 0;font-weight:700;color:var(--muted,#5f6670)">もっとラクにしたい方へ</p>
+  <div class="offline"><span>ネットにつながらない社内PCでも使いたい方へ（ネット不要・インストール不要）</span><a href="https://takimprove.booth.pm/items/9034892" target="_blank" rel="noopener">オフライン版（3本セット）はこちら →</a></div>
+  <div class="offline"><span>Excel作業を自分で自動化してみたい方へ</span><a href="https://www.amazon.co.jp/dp/B0HPKZ1JQJ" target="_blank" rel="noopener">Kindle本『Python未経験でも大丈夫 毎月のExcel作業をダブルクリックで終わらせる本』→</a></div>
   <footer>
     <p>本ツールは無料・無保証です。大切なファイルは元のファイルを残したうえでお使いください。各ファイルの見出しは元の表の見出しを使い、値はそのまま写します（数式や色・書式は引き継ぎません）。<br>
     Excelファイルの読み書きには <a href="https://sheetjs.com/" target="_blank" rel="noopener">SheetJS</a>（Apache License 2.0）、ZIPの作成には <a href="https://stuk.github.io/jszip/" target="_blank" rel="noopener">JSZip</a>（MIT License）を使用しています。</p>
